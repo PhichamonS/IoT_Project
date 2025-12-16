@@ -12,50 +12,28 @@
 // #include <Adafruit_Sensor.h>
 // DHT dht(D5, DHT11);
 
-// Your WiFi credentials.
-// Set password to "" for open networks.
+// WiFi credentials.
 char ssid[] = "TN-HK7286";
 char pass[] = "TankAdHyryn6";
 
-// Define the pin for the moisture sensor (A0 is the analog pin)
+// Define component pins 
 #define MOISTURE_SENSOR_PIN A0
-// Define the Virtual Pin for the moisture data on Blynk
-#define BLYNK_VIRTUAL_MOISTURE_PIN V3 // Using V3 for moisture data now
+#define WATER_PUMP D3
+
+// Define the Virtual Pin on Blynk
+#define BLYNK_VIRTUAL_MOISTURE_PIN V3 // Using V3 for moisture data
 
 
 BlynkTimer timer;
-
 // This function sends Arduino's uptime every second to Virtual Pin 2.
 void myTimerEvent()
 {
-  // You can send any value at any time.
-  // Please don't send more that 10 values per second.
   Blynk.virtualWrite(V2, millis() / 1000);
 }
 
-// void SendData() {
-
-//   float h = dht.readHumidity();
-//   float t = dht.readTemperature();
-
-//   // Check if any reads failed and exit early (good practice)
-//   if (isnan(h) || isnan(t)) {
-//     Serial.println("Failed to read from DHT sensor!");
-//     return;
-//   }
-
-//   Blynk.virtualWrite(V3, t);
-//   Blynk.virtualWrite(V4, h);
-
-//   Serial.print("Temperature: ");
-//   Serial.println(t, 1);
-//   Serial.print("Humidity: ");
-//   Serial.println(h, 1);
-// }
-
 // Define your calibrated sensor values
-const int DRY_VALUE = 950;  // Adjust this based on your calibration
-const int WET_VALUE = 300;  // Adjust this based on your calibration
+const int DRY_VALUE = 950;  
+const int WET_VALUE = 300; 
 
 // Function to read the moisture sensor and send data to Blynk
 void SendData() {
@@ -72,26 +50,34 @@ void SendData() {
   Serial.println(rawMoistureValue);
   Serial.print("Moisture Percentage: ");
   Serial.println(moisturePercentage);
-}
 
+  if (moisturePercentage > 30)
+  {
+      digitalWrite(D1, LOW);    // Red LED OFF
+      digitalWrite(D2, HIGH);   // Green LED ON
+  }
+  else
+  {
+      digitalWrite(D1, HIGH);   // Red LED ON
+      digitalWrite(D2, LOW);    // Green LED OFF
+  }
+  
+}
 
 void setup()
 {
-  // LED (Red , Green)
-  pinMode(D1, OUTPUT);
-  pinMode(D2, OUTPUT);
-
-  // Debug console  
   Serial.begin(115200);
 
-  // Initialize the DHT sensor
-  // dht.begin();
+  // Digital component
+  pinMode(D1, OUTPUT);  // LED Red
+  pinMode(D2, OUTPUT);  // LED Green
+  pinMode(D3, OUTPUT);  // Pump
+
+  // Initialize the sensor
+  digitalWrite(WATER_PUMP, LOW);
 
   Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
-  // You can also specify server:
-  //Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass, "blynk.cloud", 80);
-  //Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass, IPAddress(192,168,1,100), 8080);
-
+  
   // Set up a function to be called every second (for uptime)
   timer.setInterval(1000L, myTimerEvent);
 
@@ -99,19 +85,13 @@ void setup()
   timer.setInterval(5000L, SendData);
 }
 
-
-// This function is called every time the Virtual Pin 0 state changes
-BLYNK_WRITE(V0)
+// This function is called every time the Virtual Pin 4 state changes
+BLYNK_WRITE(V4)
 {
-  int val_1 = param.asInt();
-  digitalWrite(D1, val_1);
+  int water_status = param.asInt();
+  digitalWrite(D3, water_status);
 }
 
-BLYNK_WRITE(V1)
-{
-  int val_2 = param.asInt();
-  digitalWrite(D2, val_2);
-}
 
 void loop()
 {
